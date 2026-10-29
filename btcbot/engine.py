@@ -67,6 +67,7 @@ def simulate(bars, start, end, strategy, cash=10_000.0, fee=0.001, no_entry_bars
     lots = {}  # lot_id -> (Lot, fill index)
     trades, pending = [], []
     next_id, refused = 0, 0
+    peak, max_dd = cash, 0.0  # mark-to-market equity at each bar's close
 
     def close_lot(lot_id, i, price, reason, at_close=False):
         nonlocal cash
@@ -103,6 +104,9 @@ def simulate(bars, start, end, strategy, cash=10_000.0, fee=0.001, no_entry_bars
                     log(f"  buy lot {next_id} {usd:.2f} USD @ {bar.open:.2f}")
                 next_id += 1
         pending = []
+        equity = cash + sum(lot.qty_btc for lot, _ in lots.values()) * bar.close
+        peak = max(peak, equity)
+        max_dd = max(max_dd, 1 - equity / peak)
         # 2. last bar of the window: force everything flat at the close
         if i == last:
             for lot_id in list(lots):
@@ -125,6 +129,6 @@ def simulate(bars, start, end, strategy, cash=10_000.0, fee=0.001, no_entry_bars
 
     pnl = cash - start_cash
     bh_usd, bh_pct, move = buy_and_hold(bars[first].open, bars[last].close, start_cash, fee)
-    meta = {"window_bars": last - first + 1, "refused_orders": refused}
+    meta = {"window_bars": last - first + 1, "refused_orders": refused, "max_drawdown_pct": max_dd * 100}
     return Result(trades, cash, pnl, pnl / start_cash * 100, bh_usd, bh_pct, move,
                   bool(getattr(strategy, "guard_fired", False)), meta)
