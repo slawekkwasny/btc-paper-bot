@@ -10,6 +10,11 @@ offers to install the Xcode Command Line Tools, which include Python 3.9; a pyth
 
     git clone https://github.com/slawekkwasny/btc-paper-bot.git && cd btc-paper-bot && python3 bot.py
 
+The window is the 24 hours ending at the start of the current 5-minute candle, so only closed candles are used. Feeds
+sometimes publish the newest closed candle a few seconds late: the bot then waits 5 s and asks the same feed again,
+and if it is still missing it moves the window back one candle (5 minutes) and prints a note saying so. It only
+switches to another feed for other errors. The printed window is always the one actually traded.
+
 Options: `--end 2026-10-28T12:00:00Z` replays the 24 h ending at a past time; `--source kraken|binance` forces a
 fallback feed (Binance quotes BTC/USDT, not BTC/USD); `--verbose` prints every decision and fill.
 Tests: `python3 -m unittest discover tests`.
@@ -128,8 +133,10 @@ these are evidence, nothing was tuned on them):
 | 2026-10-26 08:40 | 7 | +27.16 USD (+0.27 %) | -0.41 % | not fired |
 | 2026-10-27 08:40 | 10 | +18.69 USD (+0.19 %) | -0.83 % | not fired |
 | 2026-10-28 08:40 | 5 | +10.43 USD (+0.10 %) | +2.15 % | fired |
+| 2026-10-29 11:10 (live run) | 9 | -44.87 USD (-0.45 %) | -1.56 % | not fired |
 
-Five of seven in profit, with small wins and two larger losses: the shape the hit-rate table predicts.
+Five of seven in profit, with small wins and two larger losses: the shape the hit-rate table predicts. The live run
+at 11:10 UTC on 2026-10-29 was still inside the same down-move.
 
 ## Clean-clone test
 

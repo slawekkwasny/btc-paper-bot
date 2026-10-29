@@ -36,6 +36,10 @@ class DataError(Exception):
     """The feed returned nothing usable for the requested window."""
 
 
+class LastBarMissing(DataError):
+    """Everything is there except the newest closed bar: the feed has not published it yet."""
+
+
 def window_bounds(now):
     """The 24 h window ending at the open time of the still-running bar."""
     end = int(now) - int(now) % BAR
@@ -162,6 +166,8 @@ def validate(candles, start, end, now):
     """Check the window is complete and closed; forward-fill small gaps. Returns (bars, meta)."""
     if not candles:
         raise DataError("no candles returned")
+    if candles[-1].open_time == end - 2 * BAR:
+        raise LastBarMissing(f"last bar {end - BAR} not published yet")
     if candles[-1].open_time != end - BAR:
         raise DataError(f"last bar opens at {candles[-1].open_time}, expected {end - BAR}: feed is behind")
     if candles[-1].open_time + BAR > now:
@@ -178,15 +184,38 @@ def validate(candles, start, end, now):
                   "warmup_bars": sum(1 for b in bars if b.open_time < start)}
 
 
+LAG_RETRY_WAIT = 5  # seconds to wait before asking the same feed again for a bar it has not published yet
+
+
+def fetch_one(name, start, end, now, log=print):
+    """Fetch and validate one source. If only the newest bar is missing (publishing lag), wait and ask the same
+    feed once more; if it is still missing, shift the window back one bar. Returns (bars, meta, start, end)."""
+    def get():
+        return [c for c in normalise(FETCHERS[name](start - WARMUP, end), end) if c.open_time >= start - WARMUP]
+
+    raw = get()
+    try:
+        return validate(raw, start, end, now) + (start, end)
+    except LastBarMissing:
+        time.sleep(LAG_RETRY_WAIT)
+    raw = get()
+    try:
+        return validate(raw, start, end, now) + (start, end)
+    except LastBarMissing:
+        log("note: the latest 5-minute bar was not published yet; window shifted back one bar")
+    start, end = start - BAR, end - BAR  # the shifted window has one warm-up bar fewer; nothing is refetched
+    return validate(raw, start, end, now) + (start, end)
+
+
 def fetch_candles(start, end, source="auto", now=None, log=print):
-    """Fetch [start - WARMUP, end) from one source, or from coinbase -> kraken -> binance with source="auto"."""
+    """Fetch [start - WARMUP, end) from one source, or from coinbase -> kraken -> binance with source="auto".
+    Returns (bars, meta, start, end): the window moves back one bar when the feed lags on the newest bar."""
     now = time.time() if now is None else now
     names = list(FETCHERS) if source == "auto" else [source]
     errors = []
     for name in names:
         try:
-            raw = [c for c in normalise(FETCHERS[name](start - WARMUP, end), end) if c.open_time >= start - WARMUP]
-            bars, meta = validate(raw, start, end, now)
+            bars, meta, w_start, w_end = fetch_one(name, start, end, now, log)
         except (DataError, KeyError, IndexError, TypeError, ValueError, StopIteration) as e:
             errors.append(f"{name}: {e}")
             log(f"data: {name} failed: {e}")
@@ -196,5 +225,5 @@ def fetch_candles(start, end, source="auto", now=None, log=print):
         meta["source"] = name
         if name == "binance":
             meta["note"] = "Binance quotes BTC/USDT, not BTC/USD"
-        return bars, meta
+        return bars, meta, w_start, w_end
     raise DataError("all sources failed: " + "; ".join(errors))

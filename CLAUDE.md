@@ -50,6 +50,8 @@ real data from a public feed with no API keys, one command, rerunnable on the la
 - Always send a `User-Agent` header, 10 s timeout, 3 retries with exponential backoff, ≥ 0.25 s between calls.
 - Validate after fetching: exactly 288 bars inside the window (allow ≤ 2 % gaps, forward-fill them and print a
   warning); abort with a clear message if more are missing or if the last bar is not closed. Print the source used.
+- Publishing lag: if only the newest closed bar is missing, wait 5 s and refetch the same source once; if it is still
+  missing, shift the window back one bar, print a note, and keep the source. Other errors fall back to the next source.
 
 ## Repo layout
 

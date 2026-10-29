@@ -52,7 +52,7 @@ def write(name, header, rows):
 
 def day(end_iso):
     start, end = window_bounds(parse_utc(end_iso))
-    bars, meta = fetch_candles(start, end, "coinbase", end)
+    bars, meta, start, end = fetch_candles(start, end, "coinbase", end)
     rec = Recorder()
     r = simulate(bars, start, end, rec)
     window = [b for b in bars if start <= b.open_time < end]

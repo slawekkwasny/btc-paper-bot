@@ -33,7 +33,7 @@ def render(result, meta, start, end, strategy, cash=10_000.0):
         f"{'#':>2}  {'buy (UTC)':11}  {'buy price':>10}  {'sell (UTC)':11}  {'sell price':>10}  {'size BTC':>10}  "
         f"{'fees USD':>8}  {'P&L USD':>9}  {'P&L %':>7}  exit",
     ]
-    for n, t in enumerate(result.trades, 1):
+    for n, t in enumerate(sorted(result.trades, key=lambda t: (t.buy_time, t.sell_time)), 1):
         lines.append(f"{n:>2}  {hhmm(t.buy_time):11}  {t.buy_price:>10,.2f}  {hhmm(t.sell_time):11}  "
                      f"{t.sell_price:>10,.2f}  {t.qty_btc:>10.6f}  {t.fees_usd:>8.2f}  {t.pnl_usd:>+9.2f}  "
                      f"{t.pnl_pct:>+6.3f}%  {t.exit_reason}")

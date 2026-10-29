@@ -31,7 +31,7 @@ def main(argv=None):
     now = parse_utc(args.end) if args.end else time.time()
     start, end = window_bounds(now)
     try:
-        bars, meta = fetch_candles(start, end, args.source, now)
+        bars, meta, start, end = fetch_candles(start, end, args.source, now)  # may shift back one bar
     except DataError as e:
         print(f"error: could not fetch candles for {iso(start)} -> {iso(end)}: {e}", file=sys.stderr)
         return 1

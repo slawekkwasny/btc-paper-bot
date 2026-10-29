@@ -2,8 +2,8 @@ import json
 import os
 import unittest
 
-from btcbot.data import (BAR, DAY, WARMUP, Candle, DataError, fill_gaps, normalise, parse_binance, parse_coinbase,
-                         parse_kraken, validate, window_bounds)
+from btcbot.data import (BAR, DAY, WARMUP, Candle, DataError, LastBarMissing, fill_gaps, normalise, parse_binance,
+                         parse_coinbase, parse_kraken, validate, window_bounds)
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures")
 FIX_END = 1793262000  # the fixtures were captured with this window end
@@ -103,3 +103,62 @@ class TestValidate(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPublishingLag(unittest.TestCase):
+    """The newest closed bar is sometimes published a few seconds late: retry the same feed, then shift back."""
+    start, end = 1793262000 - DAY, 1793262000
+
+    def run_fake(self, missing_calls):
+        calls, notes = [], []
+
+        def fake(a, b):
+            calls.append((a, b))
+            n = (b - a) // BAR
+            return bars(a, n - 1) if len(calls) <= missing_calls else bars(a, n)
+
+        from unittest import mock
+        from btcbot import data
+        with mock.patch.dict(data.FETCHERS, {"coinbase": fake}), mock.patch.object(data.time, "sleep") as sleep:
+            out = data.fetch_candles(self.start, self.end, "auto", now=self.end + 5, log=notes.append)
+        return out, calls, notes, sleep
+
+    def test_bar_arrives_on_retry(self):
+        (candles, meta, start, end), calls, notes, sleep = self.run_fake(missing_calls=1)
+        self.assertEqual(len(calls), 2)
+        sleep.assert_called_once_with(5)
+        self.assertEqual((start, end), (self.start, self.end))
+        self.assertEqual(candles[-1].open_time, self.end - BAR)
+        self.assertEqual(meta["source"], "coinbase")
+        self.assertEqual(notes, [])
+
+    def test_bar_stays_missing_shifts_window(self):
+        (candles, meta, start, end), calls, notes, sleep = self.run_fake(missing_calls=99)
+        self.assertEqual(len(calls), 2)  # same feed asked twice, no fallback to another source
+        self.assertEqual((start, end), (self.start - BAR, self.end - BAR))
+        self.assertEqual(candles[-1].open_time, end - BAR)
+        self.assertEqual(sum(1 for c in candles if start <= c.open_time < end), 288)
+        self.assertEqual(meta["source"], "coinbase")
+        self.assertEqual(notes, ["note: the latest 5-minute bar was not published yet; window shifted back one bar"])
+
+    def test_other_gaps_still_fall_back(self):
+        from unittest import mock
+        from btcbot import data
+        tried = []
+
+        def behind(a, b):
+            tried.append("coinbase")
+            return bars(a, (b - a) // BAR - 3)  # three bars behind: not publishing lag
+
+        def ok(a, b):
+            tried.append("kraken")
+            return bars(a, (b - a) // BAR)
+
+        with mock.patch.dict(data.FETCHERS, {"coinbase": behind, "kraken": ok}), mock.patch.object(data.time, "sleep"):
+            _, meta, start, end = data.fetch_candles(self.start, self.end, "auto", now=self.end, log=lambda m: None)
+        self.assertEqual(tried, ["coinbase", "kraken"])
+        self.assertEqual((meta["source"], end), ("kraken", self.end))
+
+    def test_validate_flags_only_the_newest_bar(self):
+        with self.assertRaises(LastBarMissing):
+            validate(bars(self.start - WARMUP, 575), self.start, self.end, self.end)
