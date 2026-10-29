@@ -5,6 +5,8 @@ import math
 import random
 from collections import deque
 
+from btcbot.strategy import Strategy
+
 
 class RandomEntry:
     """Baseline B1: when flat, enter with probability p per bar; exit after `hold` bars. Seeded per window."""
@@ -100,37 +102,13 @@ class S1(Base):
         return []
 
 
-class S2(Base):
-    """Tranche grid: buy a 20 % tranche when the close is g below its EMA(36), another each further g down
-    (max T lots); each lot sells at +t from its own buy price. No new lots in the last 36 bars."""
+class S2(Strategy):
+    """Tranche grid. The logic lives in btcbot/strategy.py (one copy, shared with the live bot); research runs it
+    with the pacing guard off so the grid measures the strategy itself."""
     name = "S2 tranche grid"
 
-    def __init__(self, g=0.005, t=0.006, T=5, ema_n=36, tranche=0.2, last_entry=36):
-        self.params = {"g": g, "t": t, "T": T}
-        self.g, self.t, self.T, self.share, self.last_entry = g, t, T, tranche, last_entry
-        self.ema = None
-        self.alpha = 2 / (ema_n + 1)
-        self.tranche = None
-
-    def update(self, bar):
-        self.ema = bar.close if self.ema is None else self.ema + self.alpha * (bar.close - self.ema)
-
-    def on_bar(self, bars, lots, ctx):
-        self.catch_up(bars)
-        if self.tranche is None:
-            self.tranche = self.share * ctx.cash
-        close = bars[-1].close
-        orders = [("sell", lot.lot_id, "target") for lot in lots if close >= lot.buy_price * (1 + self.t)]
-        held = [lot for lot in lots if close < lot.buy_price * (1 + self.t)]
-        if not ctx.entries_allowed or ctx.bars_left <= self.last_entry or len(held) >= self.T:
-            return orders
-        if not held:
-            trigger = close <= self.ema * (1 - self.g)
-        else:
-            trigger = close <= max(held, key=lambda lot: lot.lot_id).buy_price * (1 - self.g)
-        if trigger and ctx.cash >= self.tranche:
-            orders.append(("buy", self.tranche))
-        return orders
+    def __init__(self, g=0.005, t=0.006, T=5, guard=False):
+        super().__init__(g=g, t=t, T=T, guard=guard)
 
 
 class S3(Base):

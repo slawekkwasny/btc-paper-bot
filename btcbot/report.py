@@ -2,8 +2,10 @@
 from datetime import datetime, timezone
 
 # Share of historical 24 h windows the shipped strategy ended in profit (research/evaluate.py); set in Phase 4.
-BACKTEST_HIT_RATE = None
-BACKTEST_WINDOWS = None
+BACKTEST_HIT_RATE = 58.5
+BACKTEST_TEST_HIT_RATE = 57.2
+BACKTEST_BH_HIT_RATE = 46.5
+BACKTEST_WINDOWS = 2113
 
 
 def iso(t):
@@ -54,5 +56,6 @@ def render(result, meta, start, end, strategy, cash=10_000.0):
         lines.append("backtest        hit-rate over historical 24 h windows: not measured yet (see README)")
     else:
         lines.append(f"backtest        hit-rate over {BACKTEST_WINDOWS} historical 24 h windows: "
-                     f"{BACKTEST_HIT_RATE:.0f} % (see README)")
+                     f"{BACKTEST_HIT_RATE:.1f} % in profit (last-30-day test split {BACKTEST_TEST_HIT_RATE:.1f} %, "
+                     f"buy-and-hold {BACKTEST_BH_HIT_RATE:.1f} %; see README)")
     return "\n".join(lines)

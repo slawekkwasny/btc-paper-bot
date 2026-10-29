@@ -297,6 +297,53 @@ def selection_report():
     return info, "\n".join(lines), pick
 
 
+GUARD_NOTE = """
+How the guard was chosen (train split only, same strategy parameters): PLAN.md's guard lowered the dip threshold by
+0.75x every 12 bars from bar 192 and then forced full 20 % tranches from bar 264. That cost 8 pp of train hit-rate
+(62.2 % -> 54.2 %) because late full-size tranches and their fees flip small winning days. Measured train hit-rates:
+
+| guard tranche size | with threshold decay from bar 192 | forced tranches from bar 264 only |
+|---|---|---|
+| 20 % | 54.2 % | 52.8 % |
+| 10 % | 57.0 % | 56.6 % |
+| 5 % | 58.4 % | **59.2 % (shipped)** |
+| 2 % | 59.7 % | 60.6 % |
+
+All variants give P(trades >= 5) = 100 % on train. Smaller is cheaper because the guard's job is only to complete the
+round trips the rule asks for; 5 % was chosen over 2 % (+1.4 pp, inside the noise) so the guard trades remain real
+positions rather than token ones, and the threshold decay was dropped (no gain, one fewer moving part)."""
+
+
+def guard_report():
+    """The shipped strategy (guard on) vs the same parameters with the guard off, window by window."""
+    on = run_windows("shipped", {})
+    off = run_windows("S2", dict(Shipped().params))
+    m_on, m_off = split_metrics(on), split_metrics(off)
+    fired = [(a, b) for a, b in zip(on, off) if a["guard_fired"]]
+    cost = sum(a["pnl_pct"] - b["pnl_pct"] for a, b in fired) / max(len(fired), 1)
+    flips_up = sum(a["pnl_pct"] > 0 >= b["pnl_pct"] for a, b in fired)
+    flips_down = sum(b["pnl_pct"] > 0 >= a["pnl_pct"] for a, b in fired)
+    down = [r for r in on if r["bh_pnl_pct"] < -2]
+    with open(os.path.join(RESULTS, "shipped_windows.csv"), "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(on[0]))
+        w.writeheader()
+        w.writerows({k: round(v, 5) if isinstance(v, float) else v for k, v in r.items()} for r in on)
+    sh = Shipped()
+    rows = [(f"shipped: {sh.name}", fmt_params(sh.params) + ", guard on", m_on),
+            ("same, guard off (= S2 selected)", fmt_params(sh.params), m_off)]
+    text = ["", "## Shipped strategy with the >= 5-trade pacing guard", "", table(rows), "",
+            f"- The guard fired in {m_on['full']['guard']:.1f} % of windows (train {m_on['train']['guard']:.1f} %, "
+            f"test {m_on['test']['guard']:.1f} %). On those windows it changed P&L by {cost:+.3f} percentage points "
+            f"on average; it turned {flips_down} winning windows into losers and {flips_up} losers into winners.",
+            f"- P(trades >= 5) with the guard: {m_on['full']['p_min_trades']:.1f} % (without: "
+            f"{m_off['full']['p_min_trades']:.1f} %).",
+            f"- Known failure mode, trend-down days: on the {len(down)} windows where buy-and-hold lost more than 2 %, "
+            f"the shipped strategy ended in profit in {100 * sum(r['pnl_pct'] > 0 for r in down) / max(len(down), 1):.1f} %"
+            f" of them (median P&L {pct([r['pnl_pct'] for r in down], 0.5):+.2f} %).",
+            f"- Per-window results: shipped_windows.csv.", GUARD_NOTE]
+    return m_on, "\n".join(text)
+
+
 FEE_NOTE = """
 Why random entries score far below 50 %: with zero fees the same random strategy wins 51-55 % of windows
 (checked on every third window, 5 seeds); with 0.1 % per side its ~5.7 round trips cost ~1.1 % of capital per day,
@@ -314,7 +361,10 @@ def main():
         print(md)
     elif cmd == "summary":
         info, sel, pick = selection_report()
-        md = summary_md(info, notes=FEE_NOTE + sel + "\n")
+        m_on, guard = guard_report()
+        md = summary_md(info, notes=FEE_NOTE + sel + "\n" + guard + "\n")
+        print(f"\nreport.py constants: BACKTEST_HIT_RATE = {m_on['full']['hit']:.1f}, "
+              f"BACKTEST_WINDOWS = {m_on['full']['n']:.0f}, test hit-rate {m_on['test']['hit']:.1f}")
         with open(os.path.join(RESULTS, "summary.md"), "w") as f:
             f.write(md)
         print(md)
