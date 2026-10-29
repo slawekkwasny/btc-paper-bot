@@ -151,7 +151,7 @@ def baselines(seeds=30):
     b1 = evaluate_many([("random", {"seed": k}) for k in range(seeds)])
     b0 = split_metrics(shipped_recs, key="bh_pnl_pct")
     for sp in SPLITS:  # buy-and-hold is 1 round trip per window by construction
-        b0[sp].update(p_min_trades=0.0, trades=1.0, corr=1.0)
+        b0[sp].update(p_min_trades=0.0, trades=1.0, corr=1.0, guard=0.0)
     rows = [("buy-and-hold (B0)", "all in at open, out at close", b0)]
     b1_hits = {sp: [m[sp]["hit"] for _, _, m in b1] for sp in SPLITS}
     b1_mean = {sp: {c: sum(m[sp][c] for _, _, m in b1) / len(b1) for c in ("n",) + COLS} for sp in SPLITS}

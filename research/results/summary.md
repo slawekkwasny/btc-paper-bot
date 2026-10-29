@@ -12,7 +12,7 @@ than that are noise.
 
 | strategy | params | train hit % | test hit % | full hit % | median P&L % | 5th pct % | P(trades>=5) % | mean trades | guard % | corr w/ market |
 |---|---|---|---|---|---|---|---|---|---|---|
-| buy-and-hold (B0) | all in at open, out at close | 47.7 | 44.0 | 46.5 | -0.089 | -2.450 | 0.0 | 1.0 | 33.3 | +1.00 |
+| buy-and-hold (B0) | all in at open, out at close | 47.7 | 44.0 | 46.5 | -0.089 | -2.450 | 0.0 | 1.0 | 0.0 | +1.00 |
 | random entries (B1, mean of 30 seeds) | p=0.04/bar, hold 24 bars | 16.4 | 11.3 | 14.7 | -1.064 | -2.935 | 85.2 | 5.7 | 0.0 | +0.72 |
 | shipped: tranche grid (dip below 3 h EMA, 20 % tranches, per-tranche take-profit) | g=0.0018, t=0.0051, T=5 | 59.2 | 57.2 | 58.5 | +0.079 | -1.803 | 100.0 | 6.5 | 33.3 | +0.55 |
 
