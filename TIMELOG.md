@@ -5,10 +5,10 @@ Times are UTC; the session times come from the commit timestamps (`git log`), wh
 
 | date (UTC) | what | hands-on |
 |---|---|---|
-| before 2026-10-29 | research and the work plan with Claude (claude.ai): PLAN.md, CLAUDE.md | not timed |
+| before 2026-10-29 | research and the work plan with Claude (Claude Fable on claude.ai, with research agents; not the Deep Research mode): PLAN.md, CLAUDE.md | 10-20 min |
 | 2026-10-29 08:17-09:05 | Claude Code session: setup, phases 1-5 (data, engine, harness, grids, selection, guard, README), replays and the results dashboard; I reviewed each checkpoint and made the calls on repo visibility and the guard design | ~50 min |
 | pending | Loom recording (5 min video, ~2-3 takes) | ~20 min (estimate) |
-| | **total, excluding the untimed planning** | **~1 h 10 min** |
+| | **total** | **~1 h 20 min - 1 h 30 min** |
 
 Claude Code's own running time is part of the session row: it wrote and ran the code while I reviewed. Machine time
 for the parameter grids was about 5 minutes in total (`research/evaluate.py`, 8 processes).

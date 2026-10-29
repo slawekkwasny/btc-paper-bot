@@ -146,8 +146,8 @@ the system bundle `/etc/ssl/cert.pem` with verification still on, so this needs 
 
 ## AI tools used
 
-Claude (claude.ai) for the research and the work plan ([PLAN.md](PLAN.md)) and the rules file
-([CLAUDE.md](CLAUDE.md)); Claude Code (Claude Opus 5.5) for the implementation, following the plan phase by phase.
+Claude Fable (claude.ai, with research agents, 10-20 minutes) for the research, the work plan
+([PLAN.md](PLAN.md)) and the rules file ([CLAUDE.md](CLAUDE.md)); Claude Code (Claude Opus 5.5) for the implementation, following the plan phase by phase.
 Every number in this README and in `research/results/` comes from running the code; the commit history shows the
 order things were done in. Hands-on time: see [TIMELOG.md](TIMELOG.md).
 
