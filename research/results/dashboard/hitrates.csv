@@ -1,0 +1,7 @@
+strategy,kind,train_hit,test_hit,full_hit
+Random entries,baseline,16.4,11.3,14.7
+Buy-and-hold,baseline,47.7,44.0,46.5
+S1 dip reversion,candidate,27.3,30.6,28.1
+S3 momentum,candidate,32.7,28.8,31.4
+S2 tranche grid,candidate,62.2,59.3,61.2
+Shipped (S2 + guard),shipped,59.2,57.2,58.5
