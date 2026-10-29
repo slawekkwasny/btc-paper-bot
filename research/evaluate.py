@@ -1,6 +1,7 @@
 """Rolling 24 h window evaluation on the same engine and strategy classes as the live bot.
 
     python3 research/evaluate.py baselines        # B0 buy-and-hold, B1 random entries (30 seeds), placeholder
+    python3 research/evaluate.py grid S1          # coarse grid on train, fine grid around the top 10 -> CSVs
 
 Windows start every hour from series_start + 24 h (warm-up) to series_end - 24 h. Train = windows that end on or
 before series_start + 60 d; test = windows that start at or after it (the ~23 windows straddling the split are left
@@ -187,6 +188,60 @@ One parameter set over all windows takes {info['seconds_per_set']:.1f} s (pure P
 {notes}"""
 
 
+# --- parameter grids: coarse on train, then a fine pass around the top 10; selection never reads test ---
+import itertools  # noqa: E402
+
+
+def product(**axes):
+    return [dict(zip(axes, v)) for v in itertools.product(*axes.values())]
+
+
+COARSE = {
+    "S1": product(ema_n=[24, 36, 72], vol_n=[72], k=[1.0, 1.5, 2.0, 2.5], H=[12, 24, 48], s=[3, 4, None],
+                  min_edge=[0.003]),
+    "S2": product(g=[0.003, 0.005, 0.008], t=[0.004, 0.006, 0.009, 0.012], T=[3, 5]),
+    "S3": product(L=[24, 48, 96], trail=[0.005, 0.010, 0.015], H=[48, 96]),
+}
+
+
+def neighbours(family, p):
+    """The fine grid around one coarse winner."""
+    if family == "S1":
+        return product(ema_n=[p["ema_n"]], vol_n=[36, 72], k=sorted({max(0.5, p["k"] - 0.25), p["k"], p["k"] + 0.25}),
+                       H=[p["H"]], s=[p["s"]], min_edge=[0, 0.003, 0.005])
+    if family == "S2":
+        return product(g=[round(p["g"] * f, 4) for f in (0.8, 1, 1.25)], t=[round(p["t"] * f, 4) for f in (0.85, 1, 1.15)],
+                       T=[p["T"]])
+    return product(L=[round(p["L"] * f) for f in (0.75, 1, 1.25)], trail=[round(p["trail"] * f, 4) for f in (0.8, 1, 1.2)],
+                   H=[p["H"]])
+
+
+def train_key(row):
+    m = row[2]["train"]
+    return (m["hit"], m["p5"])
+
+
+def grid(family):
+    t = time.time()
+    coarse = evaluate_many([(family, p) for p in COARSE[family]])
+    write_csv(os.path.join(RESULTS, f"{family}_coarse.csv"), coarse)
+    top10 = sorted(coarse, key=train_key, reverse=True)[:10]
+    seen = {json.dumps(p, sort_keys=True) for _, p, _ in coarse}
+    fine_sets = []
+    for _, p, _ in top10:
+        for q in neighbours(family, p):
+            if json.dumps(q, sort_keys=True) not in seen:
+                seen.add(json.dumps(q, sort_keys=True))
+                fine_sets.append(q)
+    fine = evaluate_many([(family, p) for p in fine_sets])
+    write_csv(os.path.join(RESULTS, f"{family}_fine.csv"), fine)
+    ranked = sorted(coarse + fine, key=train_key, reverse=True)
+    print(f"{family}: {len(coarse)} coarse + {len(fine)} fine sets in {time.time() - t:.0f} s; top 10 by train hit-rate:")
+    for _, p, m in ranked[:10]:
+        print(f"  train {m['train']['hit']:5.1f} %  p5 {m['train']['p5']:+.2f}  trades {m['train']['trades']:.1f}  {fmt_params(p)}")
+    return ranked
+
+
 FEE_NOTE = """
 Why random entries score far below 50 %: with zero fees the same random strategy wins 51-55 % of windows
 (checked on every third window, 5 seeds); with 0.1 % per side its ~5.7 round trips cost ~1.1 % of capital per day,
@@ -202,6 +257,8 @@ def main():
         with open(os.path.join(RESULTS, "summary.md"), "w") as f:
             f.write(md)
         print(md)
+    elif cmd == "grid":
+        grid(sys.argv[2])
     else:
         sys.exit(__doc__)
 
