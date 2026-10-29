@@ -1,4 +1,4 @@
-$ /usr/bin/python3 bot.py   # clean clone of 75234d2 at 2026-10-29T08:42:39Z, macOS 26.6.2, Python 3.9.6
+$ /usr/bin/python3 bot.py   # clean clone of 75234d2 (now 74fa21b after the author e-mail was corrected) at 2026-10-29T08:42:39Z, macOS 26.6.2, Python 3.9.6
 BTC paper-trading bot: last 24 h replay
 window     2026-10-28T08:40:00Z -> 2026-10-29T08:40:00Z (UTC)
 data       coinbase, 288 x 5-min bars in window (+288 warm-up, 0 gaps filled)

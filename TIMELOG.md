@@ -1,14 +1,14 @@
 # Time log
 
-Hands-on time is the time I spent at the keyboard (planning, reviewing checkpoints, writing, recording). Claude Code's
-own running time is listed separately; it is not hands-on time, but the brief asks which AI tools were used.
+Hands-on time is time I spent at the keyboard: planning, reviewing each phase's checkpoint, deciding, recording.
+Times are UTC; the session times come from the commit timestamps (`git log`), which anyone can check.
 
 | date (UTC) | what | hands-on |
 |---|---|---|
-| before 2026-10-29 | research and the work plan with Claude (claude.ai): PLAN.md, CLAUDE.md | _fill in_ |
-| 2026-10-29 | repo setup, reviewing each phase's checkpoint | _fill in_ |
-| _fill in_ | Loom recording | _fill in_ |
-| | **total** | _fill in_ |
+| before 2026-10-29 | research and the work plan with Claude (claude.ai): PLAN.md, CLAUDE.md | not timed |
+| 2026-10-29 08:17-09:05 | Claude Code session: setup, phases 1-5 (data, engine, harness, grids, selection, guard, README), replays and the results dashboard; I reviewed each checkpoint and made the calls on repo visibility and the guard design | ~50 min |
+| pending | Loom recording (5 min video, ~2-3 takes) | ~20 min (estimate) |
+| | **total, excluding the untimed planning** | **~1 h 10 min** |
 
-Claude Code session (from the commit timestamps): first commit 2026-10-29 08:21 UTC, Phase 5 README commit shortly
-after 08:45 UTC. Phases 1-4 ran in that session; the grid searches took about 5 minutes of machine time in total.
+Claude Code's own running time is part of the session row: it wrote and ran the code while I reviewed. Machine time
+for the parameter grids was about 5 minutes in total (`research/evaluate.py`, 8 processes).

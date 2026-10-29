@@ -134,7 +134,7 @@ Five of seven in profit, with small wins and two larger losses: the shape the hi
 ## Clean-clone test
 
     $ cd /tmp && rm -rf btc-paper-bot && gh repo clone slawekkwasny/btc-paper-bot && cd btc-paper-bot && /usr/bin/python3 bot.py
-    # 2026-10-29T08:42:39Z, commit 75234d2, macOS 26.6.2, Apple's /usr/bin/python3 = Python 3.9.6, nothing installed
+    # 2026-10-29T08:42:39Z, commit 74fa21b (75234d2 before the author e-mail was corrected), macOS 26.6.2, Apple's /usr/bin/python3 = Python 3.9.6, nothing installed
     BTC paper-trading bot: last 24 h replay
     window     2026-10-28T08:40:00Z -> 2026-10-29T08:40:00Z (UTC)
     ...
