@@ -51,7 +51,7 @@ class TestRules(unittest.TestCase):
         r = simulate(series(576), START, START + DAY, Scripted(buys=[10]))
         self.assertEqual(len(r.trades), 1)
         self.assertEqual(r.trades[0].exit_reason, "eod")
-        self.assertEqual(r.trades[0].sell_time, START + DAY - BAR)
+        self.assertEqual(r.trades[0].sell_time, START + DAY)  # close of the last window bar
 
     def test_no_entry_zone(self):
         # window bars 0..287; bar 281 has 6 bars left -> refused; bar 280 has 7 -> allowed

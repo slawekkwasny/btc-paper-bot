@@ -114,7 +114,10 @@ def fetch_coinbase(start, end):
 
 def fetch_kraken(start, end):
     # Kraken only serves the latest 720 bars (60 h); `since` cannot reach further back.
-    return parse_kraken(get_json(KRAKEN_URL.format(since=start - BAR)))
+    rows = parse_kraken(get_json(KRAKEN_URL.format(since=start - BAR)))
+    if rows and min(c.open_time for c in rows) > start:
+        raise DataError("kraken only serves the latest 720 bars (60 h); this window starts earlier")
+    return rows
 
 
 def fetch_binance(start, end):

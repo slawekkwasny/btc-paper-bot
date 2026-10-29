@@ -68,14 +68,15 @@ def simulate(bars, start, end, strategy, cash=10_000.0, fee=0.001, no_entry_bars
     trades, pending = [], []
     next_id, refused = 0, 0
 
-    def close_lot(lot_id, i, price, reason):
+    def close_lot(lot_id, i, price, reason, at_close=False):
         nonlocal cash
         lot, _ = lots.pop(lot_id)
         gross = lot.qty_btc * price
         sell_fee = fee * gross
         cash += gross - sell_fee
         pnl = gross - sell_fee - lot.usd_spent
-        trades.append(Trade(lot.buy_time, lot.buy_price, bars[i].open_time, price, lot.qty_btc, lot.buy_fee,
+        sell_time = bars[i].open_time + (BAR if at_close else 0)  # fills happen at the bar's open or close
+        trades.append(Trade(lot.buy_time, lot.buy_price, sell_time, price, lot.qty_btc, lot.buy_fee,
                             sell_fee, lot.buy_fee + sell_fee, pnl, pnl / lot.usd_spent * 100, reason))
         if log:
             log(f"  sell lot {lot_id} @ {price:.2f} ({reason}) pnl {pnl:+.2f}")
@@ -105,7 +106,7 @@ def simulate(bars, start, end, strategy, cash=10_000.0, fee=0.001, no_entry_bars
         # 2. last bar of the window: force everything flat at the close
         if i == last:
             for lot_id in list(lots):
-                close_lot(lot_id, i, bar.close, "eod")
+                close_lot(lot_id, i, bar.close, "eod", at_close=True)
             break
         # 3. ask the strategy, which sees bars[0..i] only
         bars_left = last - i
