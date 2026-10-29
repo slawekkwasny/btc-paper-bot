@@ -2,6 +2,8 @@
 
     python3 research/evaluate.py baselines        # B0 buy-and-hold, B1 random entries (30 seeds), placeholder
     python3 research/evaluate.py grid S1          # coarse grid on train, fine grid around the top 10 -> CSVs
+    python3 research/evaluate.py extend           # S2 grid below the edge where its optimum landed
+    python3 research/evaluate.py summary          # baselines + top 3 per family + selection -> summary.md
 
 Windows start every hour from series_start + 24 h (warm-up) to series_end - 24 h. Train = windows that end on or
 before series_start + 60 d; test = windows that start at or after it (the ~23 windows straddling the split are left
@@ -216,6 +218,9 @@ def neighbours(family, p):
                    H=[p["H"]])
 
 
+EXTEND_S2 = product(g=[0.0012, 0.0015, 0.0018, 0.002], t=[0.0034, 0.004, 0.0046, 0.0051, 0.006], T=[5])
+
+
 def train_key(row):
     m = row[2]["train"]
     return (m["hit"], m["p5"])
@@ -242,6 +247,56 @@ def grid(family):
     return ranked
 
 
+def read_csv(path):
+    rows = []
+    with open(path) as f:
+        for r in csv.DictReader(f):
+            m = {sp: {c: float(r[f"{sp}_{c}"]) for c in ("n",) + COLS} for sp in SPLITS}
+            rows.append((r["strategy"], json.loads(r["params"]), m))
+    return rows
+
+
+def family_rows(family):
+    rows = []
+    for suffix in ("coarse", "fine", "extend"):
+        path = os.path.join(RESULTS, f"{family}_{suffix}.csv")
+        if os.path.exists(path):
+            rows += read_csv(path)
+    return sorted(rows, key=train_key, reverse=True)
+
+
+def select(top):
+    """PLAN.md 4.3: highest train hit-rate whose test hit-rate is within 5 pp of train; fewer parameters break ties."""
+    ok = [r for r in top if abs(r[2]["test"]["hit"] - r[2]["train"]["hit"]) <= 5]
+    return max(ok, key=lambda r: (r[2]["train"]["hit"], -len(r[1]), r[2]["train"]["p5"])) if ok else None
+
+
+def selection_report():
+    info = baselines()
+    tops, counts = [], {}
+    for family in ("S1", "S2", "S3"):
+        rows = family_rows(family)
+        counts[family] = len(rows)
+        tops += [(f"{family} #{i + 1} (train rank)", p, m) for i, (_, p, m) in enumerate(rows[:3])]
+    pick = select(tops)
+    lines = ["", "## Candidates (top 3 per family by train hit-rate; test shown, never used for ranking)", "",
+             table([(label, fmt_params(p), m) for label, p, m in tops]), "",
+             f"Parameter sets run: " + ", ".join(f"{f} {n}" for f, n in counts.items()) +
+             " (full per-set metrics in the CSVs next to this file).", "", "## Selection (PLAN.md 4.3)", ""]
+    for label, p, m in tops:
+        gap = m["test"]["hit"] - m["train"]["hit"]
+        lines.append(f"- {label} ({fmt_params(p)}): train {m['train']['hit']:.1f} %, test {m['test']['hit']:.1f} % "
+                     f"(gap {gap:+.1f} pp) -> {'eligible' if abs(gap) <= 5 else 'discarded (gap > 5 pp)'}")
+    if pick:
+        label, p, m = pick
+        lines += ["", f"**Selected: {label}, {fmt_params(p)}.** Train hit-rate {m['train']['hit']:.1f} %, test "
+                  f"{m['test']['hit']:.1f} %, edge over random entries (full) "
+                  f"{m['full']['hit'] - info['rows'][1][2]['full']['hit']:+.1f} pp, over buy-and-hold "
+                  f"{m['full']['hit'] - info['rows'][0][2]['full']['hit']:+.1f} pp. Its P(trades >= 5) is "
+                  f"{m['full']['p_min_trades']:.0f} % without the pacing guard; Phase 4 adds the guard."]
+    return info, "\n".join(lines), pick
+
+
 FEE_NOTE = """
 Why random entries score far below 50 %: with zero fees the same random strategy wins 51-55 % of windows
 (checked on every third window, 5 seeds); with 0.1 % per side its ~5.7 round trips cost ~1.1 % of capital per day,
@@ -257,8 +312,20 @@ def main():
         with open(os.path.join(RESULTS, "summary.md"), "w") as f:
             f.write(md)
         print(md)
+    elif cmd == "summary":
+        info, sel, pick = selection_report()
+        md = summary_md(info, notes=FEE_NOTE + sel + "\n")
+        with open(os.path.join(RESULTS, "summary.md"), "w") as f:
+            f.write(md)
+        print(md)
     elif cmd == "grid":
         grid(sys.argv[2])
+    elif cmd == "extend":  # the S2 optimum sat on the lower edge of g: extend the grid below it, still train-only
+        rows = evaluate_many([("S2", p) for p in EXTEND_S2])
+        write_csv(os.path.join(RESULTS, "S2_extend.csv"), rows)
+        for _, p, m in sorted(rows, key=train_key, reverse=True)[:10]:
+            print(f"  train {m['train']['hit']:5.1f} %  p5 {m['train']['p5']:+.2f}  trades {m['train']['trades']:.1f}  "
+                  f"{fmt_params(p)}")
     else:
         sys.exit(__doc__)
 

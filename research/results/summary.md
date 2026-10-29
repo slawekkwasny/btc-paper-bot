@@ -24,3 +24,33 @@ One parameter set over all windows takes 1.3 s (pure Python, one core).
 Why random entries score far below 50 %: with zero fees the same random strategy wins 51-55 % of windows
 (checked on every third window, 5 seeds); with 0.1 % per side its ~5.7 round trips cost ~1.1 % of capital per day,
 which a random 24 h path rarely repays. Any strategy here has to beat that fee drag, not a coin flip.
+
+## Candidates (top 3 per family by train hit-rate; test shown, never used for ranking)
+
+| strategy | params | train hit % | test hit % | full hit % | median P&L % | 5th pct % | P(trades>=5) % | mean trades | guard % | corr w/ market |
+|---|---|---|---|---|---|---|---|---|---|---|
+| S1 #1 (train rank) | H=48, ema_n=24, k=1.0, min_edge=0.003, s=3, vol_n=72 | 27.3 | 30.6 | 28.1 | +0.000 | -1.203 | 1.0 | 1.4 | 0.0 | +0.45 |
+| S1 #2 (train rank) | H=48, ema_n=24, k=1.0, min_edge=0.003, s=4, vol_n=72 | 27.3 | 33.0 | 28.9 | +0.000 | -1.167 | 1.0 | 1.3 | 0.0 | +0.44 |
+| S1 #3 (train rank) | H=48, ema_n=24, k=1.0, min_edge=0.003, s=None, vol_n=72 | 27.3 | 33.0 | 28.9 | +0.000 | -1.167 | 1.0 | 1.3 | 0.0 | +0.44 |
+| S2 #1 (train rank) | T=5, g=0.0018, t=0.0051 | 62.2 | 59.3 | 61.2 | +0.093 | -1.803 | 66.7 | 5.6 | 0.0 | +0.56 |
+| S2 #2 (train rank) | T=5, g=0.0018, t=0.006 | 62.1 | 59.8 | 61.4 | +0.100 | -1.813 | 64.6 | 5.2 | 0.0 | +0.57 |
+| S2 #3 (train rank) | T=5, g=0.002, t=0.0051 | 61.9 | 61.1 | 61.6 | +0.095 | -1.746 | 63.0 | 5.3 | 0.0 | +0.54 |
+| S3 #1 (train rank) | H=96, L=18, trail=0.015 | 32.7 | 28.8 | 31.4 | -0.520 | -2.589 | 0.0 | 2.6 | 0.0 | +0.90 |
+| S3 #2 (train rank) | H=96, L=24, trail=0.015 | 32.6 | 28.7 | 31.3 | -0.539 | -2.641 | 0.0 | 2.4 | 0.0 | +0.89 |
+| S3 #3 (train rank) | H=96, L=18, trail=0.018 | 32.4 | 28.3 | 31.0 | -0.550 | -2.792 | 0.0 | 2.6 | 0.0 | +0.89 |
+
+Parameter sets run: S1 278, S2 124, S3 89 (full per-set metrics in the CSVs next to this file).
+
+## Selection (PLAN.md 4.3)
+
+- S1 #1 (train rank) (H=48, ema_n=24, k=1.0, min_edge=0.003, s=3, vol_n=72): train 27.3 %, test 30.6 % (gap +3.3 pp) -> eligible
+- S1 #2 (train rank) (H=48, ema_n=24, k=1.0, min_edge=0.003, s=4, vol_n=72): train 27.3 %, test 33.0 % (gap +5.7 pp) -> discarded (gap > 5 pp)
+- S1 #3 (train rank) (H=48, ema_n=24, k=1.0, min_edge=0.003, s=None, vol_n=72): train 27.3 %, test 33.0 % (gap +5.7 pp) -> discarded (gap > 5 pp)
+- S2 #1 (train rank) (T=5, g=0.0018, t=0.0051): train 62.2 %, test 59.3 % (gap -3.0 pp) -> eligible
+- S2 #2 (train rank) (T=5, g=0.0018, t=0.006): train 62.1 %, test 59.8 % (gap -2.3 pp) -> eligible
+- S2 #3 (train rank) (T=5, g=0.002, t=0.0051): train 61.9 %, test 61.1 % (gap -0.8 pp) -> eligible
+- S3 #1 (train rank) (H=96, L=18, trail=0.015): train 32.7 %, test 28.8 % (gap -3.9 pp) -> eligible
+- S3 #2 (train rank) (H=96, L=24, trail=0.015): train 32.6 %, test 28.7 % (gap -3.9 pp) -> eligible
+- S3 #3 (train rank) (H=96, L=18, trail=0.018): train 32.4 %, test 28.3 % (gap -4.1 pp) -> eligible
+
+**Selected: S2 #1 (train rank), T=5, g=0.0018, t=0.0051.** Train hit-rate 62.2 %, test 59.3 %, edge over random entries (full) +46.5 pp, over buy-and-hold +14.7 pp. Its P(trades >= 5) is 67 % without the pacing guard; Phase 4 adds the guard.
