@@ -1,0 +1,21 @@
+$ python3 bot.py --end 2026-10-25T08:40:00Z   # replay of a past window, run at 2026-10-29T08:45:21Z, Python 3.12.0
+BTC paper-trading bot: last 24 h replay
+window     2026-10-24T08:40:00Z -> 2026-10-25T08:40:00Z (UTC)
+data       coinbase, 288 x 5-min bars in window (+288 warm-up, 0 gaps filled)
+strategy   tranche grid (dip below 3 h EMA, 20 % tranches, per-tranche take-profit) (g=0.0018, t=0.0051, T=5)
+start      10,000.00 USD, fee 0.1 % per side, long only
+
+ #  buy (UTC)     buy price  sell (UTC)   sell price    size BTC  fees USD    P&L USD    P&L %  exit
+ 1  10-24 15:10   79,526.16  10-24 16:50   79,967.81    0.025124      4.01      +7.09  +0.354%  target
+ 2  10-24 15:05   79,873.48  10-24 18:30   80,293.69    0.025015      4.01      +6.50  +0.325%  target
+ 3  10-24 14:20   80,120.00  10-24 23:10   80,528.21    0.024938      4.01      +6.17  +0.309%  target
+ 4  10-24 09:45   80,378.33  10-24 23:50   80,802.18    0.024857      4.01      +6.53  +0.326%  target
+ 5  10-24 08:45   80,530.57  10-25 08:40   80,347.44    0.024810      3.99      -8.54  -0.427%  eod
+
+trades          5 round trips (4 winners), fees paid 20.03 USD
+final balance   10,017.75 USD, 0 BTC
+profit          +17.75 USD (+0.178 %)
+buy-and-hold    -49.68 USD (-0.497 %) net of fees; price moved -0.297 %
+5-trade guard   not fired
+verdict         PROFITABLE, >= 5 trades, flat at end
+backtest        hit-rate over 2113 historical 24 h windows: 58.5 % in profit (last-30-day test split 57.2 %, buy-and-hold 46.5 %; see README)

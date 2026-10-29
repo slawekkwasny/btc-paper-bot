@@ -116,6 +116,21 @@ A losing day, and an example of the failure mode above: BTC fell 2 % over the wi
 noon hit their targets, five bought overnight were still open at the close. Every run is kept in full in
 [runs/](runs/).
 
+The seven 24 h windows before it, replayed with `--end` (same code, same hour; full output in `runs/replay-*.txt`;
+these are evidence, nothing was tuned on them):
+
+| window ends (UTC) | trades | bot P&L | buy-and-hold | guard |
+|---|---|---|---|---|
+| 2026-10-22 08:40 | 8 | -262.43 USD (-2.62 %) | -1.72 % | not fired |
+| 2026-10-23 08:40 | 7 | +26.19 USD (+0.26 %) | -0.25 % | not fired |
+| 2026-10-24 08:40 | 8 | -51.32 USD (-0.51 %) | -1.65 % | not fired |
+| 2026-10-25 08:40 | 5 | +17.75 USD (+0.18 %) | -0.50 % | not fired |
+| 2026-10-26 08:40 | 7 | +27.16 USD (+0.27 %) | -0.41 % | not fired |
+| 2026-10-27 08:40 | 10 | +18.69 USD (+0.19 %) | -0.83 % | not fired |
+| 2026-10-28 08:40 | 5 | +10.43 USD (+0.10 %) | +2.15 % | fired |
+
+Five of seven in profit, with small wins and two larger losses: the shape the hit-rate table predicts.
+
 ## Clean-clone test
 
     $ cd /tmp && rm -rf btc-paper-bot && gh repo clone slawekkwasny/btc-paper-bot && cd btc-paper-bot && /usr/bin/python3 bot.py
